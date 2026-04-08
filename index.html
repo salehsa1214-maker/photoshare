@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FotoShare</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1714">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FotoShare">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8f6f1;
+  --surface: #fff;
+  --dark: #1a1714;
+  --accent: #c8a96e;
+  --accent2: #8b6914;
+  --muted: #9a9590;
+  --border: #e8e3da;
+  --danger: #d64c4c;
+  --success: #3a9e6f;
+  --text: #2d2a26;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ── screens ── */
+.screen { display:none; min-height:100vh; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* ── nav ── */
+.nav {
+  background:var(--dark); padding:0 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  height:56px; position:sticky; top:0; z-index:100;
+}
+.nav-logo { font-family:'Playfair Display',serif; color:var(--accent); font-size:20px; }
+.nav-right { display:flex; gap:8px; align-items:center; }
+
+/* ── buttons ── */
+.btn {
+  border:none; border-radius:8px; padding:9px 16px;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+  cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-accent { background:var(--accent); color:var(--dark); }
+.btn-accent:hover { background:#d4b87a; transform:translateY(-1px); }
+.btn-ghost { background:transparent; color:rgba(255,255,255,.6); border:1px solid rgba(255,255,255,.2); }
+.btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+.btn-danger { background:transparent; color:var(--danger); border:1px solid rgba(214,76,76,.3); }
+.btn-success { background:var(--success); color:white; }
+.btn-full { width:100%; justify-content:center; padding:12px; }
+.btn-sm { padding:6px 12px; font-size:11px; }
+
+/* ── dashboard ── */
+.dash-body { padding:24px 16px; max-width:900px; margin:0 auto; width:100%; }
+.page-title { font-size:22px; font-weight:900; margin-bottom:4px; }
+.page-sub { font-size:13px; color:var(--muted); font-weight:300; margin-bottom:12px; }
+
+.storage-bar-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 24px;
+}
+.storage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.storage-label { font-size: 11px; font-weight: 700; color: var(--muted); }
+.storage-value { font-size: 11px; font-weight: 900; color: var(--accent2); }
+.storage-bar-bg {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.storage-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.5s ease;
+}
+
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
+.stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.stat-n { font-size:24px; font-weight:900; color:var(--accent2); }
+.stat-l { font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* pending banner */
+.pending-banner {
+  background:rgba(214,76,76,.07); border:1px solid rgba(214,76,76,.2);
+  border-radius:12px; padding:14px 16px; margin-bottom:20px; display:none;
+}
+.pending-banner.show { display:block; }
+.pending-title { font-size:13px; font-weight:800; color:var(--danger); margin-bottom:10px; }
+.pending-item {
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  padding:10px 12px; display:flex; align-items:center; justify-content:space-between;
+  gap:8px; margin-bottom:8px;
+}
+.pending-item:last-child { margin-bottom:0; }
+.pi-name { font-size:13px; font-weight:700; }
+.pi-sub { font-size:11px; color:var(--muted); }
+.pi-proof { font-size:11px; color:var(--accent2); margin-top:6px; }
+
+/* albums grid */
+.albums-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+.album-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  overflow:hidden; transition:all .2s; cursor:pointer;
+}
+.album-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(0,0,0,.1); border-color:var(--accent); }
+.album-thumb {
+  height:150px; background:#e8e3da; position:relative;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.thumb-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px; width:100%; height:100%; }
+.thumb-cell { background-size:cover; background-position:center; background-color:#d4cfc5; }
+.album-badge {
+  position:absolute; top:8px; left:8px;
+  padding:3px 9px; border-radius:20px; font-size:10px; font-weight:700;
+}
+.badge-paid { background:rgba(200,169,110,.9); color:var(--dark); }
+.badge-free { background:rgba(58,158,111,.9); color:white; }
+.badge-pending { background:rgba(214,76,76,.9); color:white; }
+.album-info { padding:12px 14px 8px; }
+.album-name { font-size:13px; font-weight:700; margin-bottom:3px; }
+.album-meta { font-size:11px; color:var(--muted); }
+.album-price { font-size:13px; font-weight:700; color:var(--accent2); margin-top:4px; }
+.album-actions { padding:0 12px 12px; display:flex; gap:6px; }
+.album-actions .btn { flex:1; }
+
+.empty {
+  grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--muted);
+}
+.empty-icon { font-size:44px; margin-bottom:12px; display:block; }
+.empty h3 { font-size:15px; font-weight:700; color:var(--text); margin-bottom:6px; }
+.empty p { font-size:12px; }
+
+/* ── forms ── */
+.form-group { margin-bottom:14px; }
+.form-label { display:block; font-size:12px; font-weight:700; margin-bottom:6px; }
+.form-input {
+  width:100%; padding:10px 12px; border:1.5px solid var(--border);
+  border-radius:9px; font-family:'Outfit',sans-serif; font-size:13px;
+  color:var(--text); background:var(--bg); outline:none; transition:border-color .2s;
+}
+.form-input:focus { border-color:var(--accent); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* upload zone */
+.upload-zone {
+  border:2px dashed var(--border); border-radius:10px; padding:24px;
+  text-align:center; cursor:pointer; transition:all .2s;
+}
+.upload-zone:hover,.upload-zone.over { border-color:var(--accent); background:rgba(200,169,110,.04); }
+.upload-zone-text { font-size:12px; color:var(--muted); margin-top:6px; }
+.upload-zone-text strong { color:var(--accent2); }
+.upload-info { font-size:11px; color:var(--success); font-weight:700; margin-top:6px; }
+
+.pin-dot {
+  width:12px; height:12px; border-radius:50%;
+  background:rgba(255,255,255,.15); border:2px solid rgba(255,255,255,.3);
+  transition:all .2s;
+}
+.pin-dot.filled { background:#c8a96e; border-color:#c8a96e; }
+.pin-btn {
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.12);
+  border-radius:12px; padding:16px; font-family:'Outfit',sans-serif;
+  font-size:20px; font-weight:700; color:white; cursor:pointer; transition:all .15s;
+}
+.pin-btn:active { background:rgba(200,169,110,.3); transform:scale(.95); }
+
+/* toggle */
+.toggle-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 0; border-bottom:1px solid var(--border);
+}
+.tl { font-size:12px; font-weight:700; }
+.ts { font-size:10px; color:var(--muted); }
+.toggle { position:relative; width:38px; height:20px; }
+.toggle input { opacity:0; width:0; height:0; }
+.tslider {
+  position:absolute; inset:0; background:var(--border);
+  border-radius:50px; cursor:pointer; transition:.3s;
+}
+.tslider::before {
+  content:''; position:absolute; width:14px; height:14px;
+  left:3px; top:3px; background:white; border-radius:50%; transition:.3s;
+}
+.toggle input:checked+.tslider { background:var(--accent); }
+.toggle input:checked+.tslider::before { transform:translateX(18px); }
+
+/* ── modal ── */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(4px);
+  z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.overlay.open { opacity:1; pointer-events:all; }
+.modal {
+  background:var(--surface); border-radius:18px; width:100%; max-width:480px;
+  max-height:92vh; overflow-y:auto; transform:translateY(20px); transition:transform .25s;
+}
+.overlay.open .modal { transform:translateY(0); }
+.modal-head {
+  padding:20px 20px 0; display:flex; align-items:center;
+  justify-content:space-between; margin-bottom:16px;
+}
+.modal-title { font-size:16px; font-weight:800; }
+.btn-x {
+  background:var(--border); border:none; border-radius:50%;
+  width:28px; height:28px; font-size:13px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.modal-body { padding:0 20px 20px; }
+
+/* link box */
+.link-box {
+  background:var(--bg); border:1.5px solid var(--border); border-radius:8px;
+  padding:10px 12px; font-size:11px; color:var(--accent2); font-weight:600;
+  word-break:break-all; margin-bottom:10px;
+}
+
+/* ── CLIENT GALLERY ── */
+#screen-client { background:#0e0d0b; color:white; }
+
+.client-hero {
+  height:240px; position:relative; overflow:hidden;
+  display:flex; align-items:flex-end;
+}
+.hero-bg { position:absolute; inset:0; background:linear-gradient(135deg,#1a1714,#2d2520); }
+.hero-overlay {
+  position:absolute; inset:0;
+  background:linear-gradient(to top,rgba(14,13,11,1) 0%,transparent 70%);
+}
+.hero-content { position:relative; z-index:1; padding:20px; width:100%; }
+.hero-by { font-size:10px; color:var(--accent); font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.hero-title { font-family:'Playfair Display',serif; font-size:26px; color:white; margin-bottom:6px; }
+.hero-meta { font-size:11px; color:rgba(255,255,255,.4); }
+
+/* payment wall */
+.pay-wall {
+  margin:16px; background:rgba(255,255,255,.05);
+  border:1px solid rgba(200,169,110,.25); border-radius:14px;
+  padding:20px; text-align:center;
+}
+.pw-icon { font-size:32px; margin-bottom:10px; display:block; }
+.pw-title { font-size:17px; font-weight:800; margin-bottom:6px; }
+.pw-sub { font-size:12px; color:rgba(255,255,255,.45); line-height:1.7; margin-bottom:14px; }
+.pw-price { font-size:32px; font-weight:900; color:var(--accent); }
+.pw-note { font-size:10px; color:rgba(255,255,255,.3); margin:4px 0 16px; }
+.btn-pay {
+  background:linear-gradient(135deg,var(--accent),#e8c878);
+  color:var(--dark); border:none; border-radius:10px; padding:13px;
+  font-family:'Outfit',sans-serif; font-size:14px; font-weight:900;
+  cursor:pointer; width:100%; transition:all .2s;
+}
+.btn-pay:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(200,169,110,.4); }
+
+/* pending notice */
+.pending-notice {
+  margin:16px; background:rgba(232,150,58,.1);
+  border:1px solid rgba(232,150,58,.3); border-radius:14px;
+  padding:20px; text-align:center; display:none;
+}
+.pending-notice.show { display:block; }
+.pn-icon { font-size:28px; margin-bottom:8px; display:block; }
+.pn-title { font-size:15px; font-weight:800; color:#e8963a; margin-bottom:6px; }
+.pn-sub { font-size:12px; color:rgba(255,255,255,.4); line-height:1.7; }
+
+/* photo grids */
+.preview-section { padding:0 16px 16px; }
+.section-label { font-size:11px; color:rgba(255,255,255,.35); margin-bottom:10px; }
+.photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+.photo-item {
+  aspect-ratio:1; border-radius:5px; overflow:hidden;
+  background:#2a2520; position:relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.photo-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  z-index: 10;
+  pointer-events: none;
+}
+.photo-item img {
+  width:100%; height:100%; object-fit:cover; display:block;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.photo-item video {
+  width:100%; height:100%; object-fit:cover; display:block;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.photo-item.locked img { filter:blur(12px) brightness(.35); }
+.photo-item.locked::after {
+  content:'🔒'; position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  z-index: 11;
+}
+
+.unlocked-section { padding:0 16px 16px; }
+.photo-item-ul {
+  aspect-ratio:1; border-radius:5px; overflow:hidden;
+  background:#2a2520; position:relative; background-size:cover; background-position:center;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.photo-item-ul img,
+.photo-item-ul video {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+.photo-item-ul:hover .ul-overlay { opacity:1; }
+.ul-overlay {
+  position:absolute; inset:0; background:rgba(0,0,0,.6);
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  opacity:0; transition:.2s;
+}
+.ul-btn {
+  background:var(--accent); border:none; border-radius:50%;
+  width:36px; height:36px; font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.ul-btn:hover { background:#d4b87a; transform:scale(1.1); }
+
+/* loader */
+.loader {
+  position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.loader.show { opacity:1; pointer-events:all; }
+.loader-spinner {
+  width:40px; height:40px; border:3px solid rgba(200,169,110,.3);
+  border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-8px)}
+  75%{transform:translateX(8px)}
+}
+.loader-text { color:white; font-size:12px; margin-top:12px; }
+
+/* toast */
+.toast {
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(120px);
+  background:var(--dark); color:white; padding:12px 20px; border-radius:8px;
+  font-size:12px; z-index:10000; transition:transform .3s;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* modal dark */
+.modal-dark { background:#1a1714; }
+.modal-dark .modal-title { color:white; }
+.modal-dark .form-input { background:#2a2520; border-color:#3a3530; color:white; }
+.modal-dark .form-label { color:rgba(255,255,255,.7); }
+
+.pay-amount-box {
+  background:rgba(200,169,110,.1); border:1px solid rgba(200,169,110,.2);
+  border-radius:10px; padding:16px; text-align:center; margin-bottom:16px;
+}
+.pay-amt-num { font-size:28px; font-weight:900; color:var(--accent); }
+.pay-amt-sub { font-size:11px; color:rgba(255,255,255,.4); margin-top:4px; }
+
+.bank-details-box {
+  background:rgba(200,169,110,.1); border:1px solid rgba(200,169,110,.2);
+  border-radius:10px; padding:16px; margin-bottom:16px; text-align:left;
+}
+.bank-details-box h3 { font-size:13px; font-weight:700; color:var(--accent); margin-bottom:10px; }
+.bank-detail-line { font-size:12px; color:rgba(255,255,255,.7); margin-bottom:8px; line-height:1.6; }
+.bank-detail-line strong { color:white; }
+.bank-detail-line:last-child { margin-bottom:0; }
+
+.proof-upload-zone {
+  border:2px dashed rgba(200,169,110,.3); border-radius:10px; padding:16px;
+  text-align:center; cursor:pointer; transition:all .2s; margin-bottom:16px;
+}
+.proof-upload-zone:hover { border-color:var(--accent); background:rgba(200,169,110,.05); }
+.proof-upload-zone.over { border-color:var(--accent); background:rgba(200,169,110,.1); }
+.proof-icon { font-size:24px; margin-bottom:6px; display:block; }
+.proof-text { font-size:11px; color:rgba(255,255,255,.6); }
+.proof-info { font-size:10px; color:var(--success); font-weight:700; margin-top:6px; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text" id="loaderText">Loading...</div>
+</div>
+
+<!-- PIN SCREEN -->
+<div class="screen active" id="screen-pin" style="background:#1a1714;align-items:center;justify-content:center;text-align:center;padding:40px 24px;">
+  <div style="font-family:'Playfair Display',serif;font-size:40px;color:#c8a96e;margin-bottom:8px;">📸</div>
+  <div style="font-family:'Playfair Display',serif;font-size:28px;color:white;margin-bottom:6px;">FotoShare</div>
+  <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:40px;font-weight:300;">Photographer Dashboard</div>
+  <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px 24px;width:100%;max-width:320px;">
+    <div style="font-size:14px;font-weight:700;color:white;margin-bottom:16px;">Enter your PIN</div>
+    <div id="pinDots" style="display:flex;justify-content:center;gap:12px;margin-bottom:24px;">
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto;">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinPress('del')" style="background:rgba(255,255,255,.08);font-size:16px;">⌫</button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn" onclick="pinPress('ok')" style="background:#c8a96e;color:#1a1714;">✓</button>
+    </div>
+    <div id="pinError" style="color:#d64c4c;font-size:11px;margin-top:14px;display:none;">Wrong PIN. Try again.</div>
+    <div style="margin-top:20px;font-size:10px;color:rgba(255,255,255,.2);">Default PIN: 1234 · Change in Settings</div>
+  </div>
+</div>
+
+<!-- DASHBOARD (photographer) -->
+<div class="screen" id="screen-dashboard">
+  <div class="nav">
+    <div class="nav-logo">📸 FotoShare</div>
+    <div class="nav-right">
+<button class="btn btn-accent" onclick="openModal('modal-new')">+ Album</button>
+      <button class="btn btn-ghost" onclick="openModal('modal-settings')">⚙️</button>
+    </div>
+  </div>
+  <div class="dash-body">
+    <div class="page-title" id="dashTitle">Welcome, My Studio 👋</div>
+    <div class="page-sub">Manage your photo galleries and track sales</div>
+
+    <div class="storage-bar-container">
+      <div class="storage-header">
+        <div class="storage-label">☁️ STORAGE USED (Free Tier)</div>
+        <div class="storage-value" id="storageText">0 MB / 1024 MB</div>
+      </div>
+      <div class="storage-bar-bg">
+        <div class="storage-bar-fill" id="storageBar"></div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-n" id="sAlbums">0</div>
+        <div class="stat-l">Albums</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n" id="sPhotos">0</div>
+        <div class="stat-l">Total Photos</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n" id="sSold">0</div>
+        <div class="stat-l">Paid Albums</div>
+      </div>
+    </div>
+
+    <div class="pending-banner" id="pendingBanner">
+      <div class="pending-title">⏳ Pending Payments</div>
+      <div id="pendingList"></div>
+    </div>
+
+    <div class="albums-grid" id="albumsGrid"></div>
+  </div>
+</div>
+
+<!-- CREATE ALBUM MODAL -->
+<div class="overlay" id="modal-new">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">📸 Create Album</div>
+      <button class="btn-x" onclick="closeModal('modal-new')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Album Name *</label>
+        <input type="text" class="form-input" id="f-name" placeholder="e.g., Wedding Day">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Client Name</label>
+        <input type="text" class="form-input" id="f-client" placeholder="Client name">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="f-date">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">📸 Upload Photos & Videos</label>
+        <div class="upload-zone" id="uploadZone"
+          ondragover="ev(event,'over')" ondragleave="ev(event,'leave')" ondrop="ev(event,'drop')">
+          <div style="font-size:28px;">📁</div>
+          <div class="upload-zone-text">Drag photos or videos here or <strong>click to browse</strong></div>
+          <div class="upload-info" id="uploadInfo" style="display:none;"></div>
+          <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="addFiles(this.files)" style="display:none;">
+        </div>
+        <script>
+          document.getElementById('uploadZone').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+          });
+        </script>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="tl">💰 Paid Album</div>
+          <div class="ts">Clients pay to download</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="f-paid" onchange="togglePaidUI()">
+          <span class="tslider"></span>
+        </label>
+      </div>
+
+      <div id="paidUI" style="display:none;">
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label">Price</label>
+          <div class="form-row">
+            <input type="number" class="form-input" id="f-price" placeholder="150" value="150">
+            <select class="form-input" id="f-currency">
+              <option>USD</option>
+              <option>EUR</option>
+              <option>GBP</option>
+              <option>AED</option>
+              <option>SAR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">🔗 External Download Link (Optional)</label>
+        <input type="url" class="form-input" id="f-download-link" placeholder="e.g., https://drive.google.com/file/d/... or WeTransfer link">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Leave empty to use uploaded files. Add a link to Google Drive, WeTransfer, or any other service for clients to download after payment.</div>
+      </div>
+
+      <button class="btn btn-accent btn-full" onclick="createAlbum()" style="margin-top:16px;">✅ Create Album</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">⚙️ Settings</div>
+      <button class="btn-x" onclick="closeModal('modal-settings')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Studio Name</label>
+        <input type="text" class="form-input" id="studioNameInput" placeholder="Your studio name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🛡️ Watermark Text (Preview)</label>
+        <input type="text" class="form-input" id="watermarkInput" placeholder="e.g., © SALEH EMAD" maxlength="50">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">This text will appear on all photo and video previews before payment</div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">🔐 Dashboard PIN (4 digits)</label>
+        <input type="number" class="form-input" id="pinInput" placeholder="Enter new PIN" maxlength="4" style="-moz-appearance:textfield;">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Default: 1234 — Change to protect your dashboard</div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">🏦 Bank Details (shown to clients at payment)</label>
+        <textarea class="form-input" id="bankDetailsInput" rows="4"
+          placeholder="Account Holder: Your Name&#10;Account Number: XXXX&#10;IBAN: AEXXXX&#10;Bank: Your Bank Name"
+          style="resize:vertical;"></textarea>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Each line appears as a separate detail to the client</div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveSettings()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="overlay" id="modal-share">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">🔗 Share Album</div>
+      <button class="btn-x" onclick="closeModal('modal-share')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Send this link to your client:</p>
+      <div class="link-box" id="shareLink"></div>
+      <button class="btn btn-accent btn-full" onclick="copyLink()">📋 Copy Link</button>
+      <button class="btn btn-full" style="background:#25D366;color:white;margin-top:8px;" onclick="shareWA()">💬 Send via WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment (client) - NEW SIMPLIFIED VERSION -->
+<div class="overlay" id="modal-pay">
+  <div class="modal modal-dark">
+    <div class="modal-head">
+      <div class="modal-title" style="color:white;">💳 Bank Transfer</div>
+      <button class="btn-x" onclick="closeModal('modal-pay')" style="background:rgba(255,255,255,.1);color:white;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pay-amount-box">
+        <div class="pay-amt-num" id="payAmt">$0</div>
+        <div class="pay-amt-sub">One-time payment • All photos in full quality</div>
+      </div>
+
+      <!-- Bank Details Box -->
+      <div class="bank-details-box">
+        <h3>🏦 Bank Details</h3>
+        <div class="bank-detail-line"><strong>Account Holder:</strong> SALEH EMAD JOUDIEH</div>
+        <div class="bank-detail-line"><strong>Account Number:</strong> 1015835167201</div>
+        <div class="bank-detail-line"><strong>IBAN:</strong> AE170260001015835167201</div>
+      </div>
+
+      <!-- Proof Upload Zone -->
+      <label class="form-label" style="color:rgba(255,255,255,.7);">📸 Upload Transfer Proof</label>
+      <div class="proof-upload-zone" id="proofZone"
+        ondragover="proofEv(event,'over')" ondragleave="proofEv(event,'leave')" ondrop="proofEv(event,'drop')">
+        <div class="proof-icon">📄</div>
+        <div class="proof-text">Drag receipt here or <strong>click to browse</strong></div>
+        <div class="proof-info" id="proofInfo" style="display:none;"></div>
+        <input type="file" id="proofInput" accept="image/*,.pdf" onchange="addProof(this.files)" style="display:none;">
+      </div>
+      <script>
+        document.getElementById('proofZone').addEventListener('click', () => {
+          document.getElementById('proofInput').click();
+        });
+      </script>
+
+      <button class="btn btn-confirm-pay btn-full" id="btnConfirm" onclick="sendPayRequest()">✅ Submit for Review</button>
+      <p style="font-size:10px;color:rgba(255,255,255,.25);text-align:center;margin-top:10px;">The photographer will review your proof and unlock your photos</p>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT GALLERY -->
+<div class="screen" id="screen-client">
+  <div class="client-hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-by">📸 by <span id="cBy">Studio</span></div>
+      <div class="hero-title" id="cTitle">Album Name</div>
+      <div class="hero-meta" id="cMeta">0 photos • Date</div>
+    </div>
+  </div>
+
+  <!-- Preview (locked) -->
+  <div id="cPreview" class="preview-section">
+    <div class="section-label">👁️ PREVIEW (First 3 photos)</div>
+    <div class="photo-grid" id="cPreviewGrid"></div>
+  </div>
+
+  <!-- Paywall -->
+  <div class="pay-wall" id="cPayWall">
+    <div class="pw-icon">🔒</div>
+    <div class="pw-title">Unlock Full Gallery</div>
+    <div class="pw-sub">Get all photos in full quality</div>
+    <div class="pw-price" id="cPrice">$150</div>
+    <div class="pw-note">One-time payment</div>
+    <button class="btn-pay" onclick="openModal('modal-pay')">💳 Unlock Now</button>
+  </div>
+
+  <!-- Pending -->
+  <div class="pending-notice" id="cPending">
+    <div class="pn-icon">⏳</div>
+    <div class="pn-title">Payment Under Review</div>
+    <div class="pn-sub">The photographer is reviewing your transfer proof. You'll be notified soon!</div>
+  </div>
+
+  <!-- Unlocked -->
+  <div id="cUnlocked" style="display:none;">
+    <div class="unlocked-section">
+      <div class="section-label">✅ ALL PHOTOS (Full Quality)</div>
+      <div class="photo-grid" id="cUnlockedGrid"></div>
+    </div>
+    <div id="externalLinkSection" style="padding:0 16px 16px;display:none;">
+      <a id="externalLinkBtn" href="#" target="_blank" class="btn btn-accent btn-full" style="text-decoration:none;display:block;margin-bottom:8px;">🔗 Download Full Data</a>
+    </div>
+    <div style="padding:0 16px 16px;display:flex;gap:8px;">
+      <button class="btn btn-accent btn-full" onclick="dlAll()" id="dlAllBtn">⬇️ Download All</button>
+      <button class="btn btn-ghost btn-full" onclick="checkStatus()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <div style="padding:16px;text-align:center;">
+    <button class="btn btn-ghost" onclick="goTo('dashboard')">← Back</button>
+  </div>
+</div>
+
+<!-- PROOF VIEWER MODAL -->
+<div class="overlay" id="modal-proof">
+  <div class="modal modal-dark">
+    <div class="modal-head">
+      <div class="modal-title" style="color:white;">📸 Transfer Proof</div>
+      <button class="btn-x" onclick="closeModal('modal-proof')" style="background:rgba(255,255,255,.1);color:white;">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <img id="proofImg" src="" style="max-width:100%; border-radius:8px; margin-bottom:16px;">
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ══════════ CONFIG ══════════
+const SITE_URL  = window.location.origin; // Automatically uses current domain
+const SUPA_URL  = 'https://fmjgllkivxceiykayscx.supabase.co';
+const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtamdsbGtpdnhjZWl5a2F5c2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTE3ODIsImV4cCI6MjA5MTA2Nzc4Mn0.8levxfUvQ_L9zPS8HSYF-gJa6J8M5FWWX-SaDv5mnm8';
+
+// ══════════ STATE ══════════
+let db         = null;
+let albums     = [];
+let files      = [];
+let proofFile  = null;
+let curAlbum   = null;
+let shareURL   = '';
+let studioName = 'My Studio';
+let watermarkText = '';
+
+// ══════════ BOOT ══════════
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    db = createClient(SUPA_URL, SUPA_KEY);
+
+    const cfg = JSON.parse(localStorage.getItem('fs_cfg') || '{}');
+    studioName = cfg.studioName || 'My Studio';
+    watermarkText = cfg.watermarkText || '';
+
+    // If client link → go straight to gallery, no PIN needed
+    const albumId = new URLSearchParams(window.location.search).get('album');
+    if (albumId) {
+      goTo('dashboard'); // temp screen while loading
+      showLoader('Loading your gallery...');
+      const { data, error } = await db.from('albums').select('*').eq('id', albumId).single();
+      hideLoader();
+      if (data && !error) {
+        albums = [data];
+        openClientGallery(data);
+        return;
+      } else {
+        toast('❌ Gallery not found');
+        return;
+      }
+    }
+
+    // No album param = photographer trying to access dashboard → require PIN
+    checkPin();
+
+    // PIN check will load dashboard after authentication
+    checkPin();
+
+  } catch(e) {
+    hideLoader();
+    console.error('Error:', e);
+    toast('⚠️ Connection error — check your Supabase setup');
+  }
+});
+
+// ══════════ NAVIGATION ══════════
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ══════════ DASHBOARD ══════════
+function renderDashboard() {
+  const totalMedia = albums.reduce((s, a) => s + (a.media_count || a.photo_count || 0), 0);
+  const sold       = albums.filter(a => a.unlocked).length;
+  const pending    = albums.filter(a => a.payment_pending && !a.unlocked);
+
+  document.getElementById('sAlbums').textContent = albums.length;
+  document.getElementById('sPhotos').textContent = totalMedia;
+  document.getElementById('sSold').textContent   = sold;
+  
+  updateStorageIndicator();
+
+  const banner = document.getElementById('pendingBanner');
+  const list   = document.getElementById('pendingList');
+  if (pending.length > 0) {
+    banner.classList.add('show');
+    list.innerHTML = pending.map(a => `
+      <div class="pending-item">
+        <div>
+          <div class="pi-name">${a.name}</div>
+          <div class="pi-sub">👤 ${a.client_name || 'Client'} • ${a.price || 0} ${a.currency || 'USD'}</div>
+          ${a.proof_url ? `<div class="pi-proof">📸 <a href="javascript:viewProof('${a.proof_url}')" style="color:var(--accent2);text-decoration:underline;">View Proof</a></div>` : '<div class="pi-proof" style="color:#999;">⚠️ No proof uploaded</div>'}
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-danger btn-sm" onclick="rejectPay('${a.id}')">✕</button>
+          <button class="btn btn-success btn-sm" onclick="confirmPay('${a.id}')">✅ Confirm</button>
+        </div>
+      </div>`).join('');
+  } else {
+    banner.classList.remove('show');
+  }
+
+  const grid = document.getElementById('albumsGrid');
+  if (albums.length === 0) {
+    grid.innerHTML = `<div class="empty"><span class="empty-icon">📂</span><h3>No albums yet</h3><p>Click "+ Album" to get started</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = albums.map(a => {
+    const isPending = a.payment_pending && !a.unlocked;
+    const photos    = a.photos || [];
+    const mediaCount = a.media_count || a.photo_count || photos.length || 0;
+    const thumbs    = photos.slice(0, 4).map(p =>
+      `<div class="thumb-cell" style="background-image:url(${p})"></div>`).join('');
+
+    return `
+    <div class="album-card">
+      <div class="album-thumb">
+        ${photos.length > 0
+          ? `<div class="thumb-grid">${thumbs}</div>`
+          : '<span style="font-size:36px">📷</span>'}
+        <div class="album-badge ${isPending ? 'badge-pending' : a.paid ? 'badge-paid' : 'badge-free'}">
+          ${isPending ? '⏳ Pending' : a.paid ? '💰 Paid' : '🆓 Free'}
+        </div>
+      </div>
+      <div class="album-info">
+        <div class="album-name">${a.name}</div>
+        <div class="album-meta">👤 ${a.client_name || 'Client'} • 🖼️ ${mediaCount} media</div>
+        ${a.paid ? `<div class="album-price">${a.price} ${a.currency}</div>` : ''}
+      </div>
+      <div class="album-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteAlbum('${a.id}')">🗑️</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--muted);border:1px solid var(--border);" onclick="showShareModal('${a.id}')">🔗</button>
+        ${isPending
+          ? `<button class="btn btn-success btn-sm" onclick="confirmPay('${a.id}')">✅</button>`
+          : `<button class="btn btn-accent btn-sm" onclick="openClientGallery(getAlbum('${a.id}'))">👁️</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getAlbum(id) { return albums.find(a => a.id === id); }
+
+async function updateStorageIndicator() {
+  if (!db) return;
+  try {
+    const photoCount = albums.reduce((s, a) => s + (a.photo_count || 0), 0);
+    const proofCount = albums.filter(a => a.proof_url).length;
+    const estMB = (photoCount * 4) + (proofCount * 1); // Avg 4MB per photo, 1MB per proof
+    const percentage = Math.min((estMB / 1024) * 100, 100);
+    document.getElementById('storageText').textContent = `${estMB.toFixed(1)} MB / 1024 MB`;
+    document.getElementById('storageBar').style.width = `${percentage}%`;
+    if (percentage > 80) document.getElementById('storageBar').style.background = 'var(--danger)';
+    else document.getElementById('storageBar').style.background = 'var(--accent)';
+  } catch (e) { console.error(e); }
+}
+
+// ══════════ CREATE ALBUM ══════════
+function togglePaidUI() {
+  document.getElementById('paidUI').style.display =
+    document.getElementById('f-paid').checked ? 'block' : 'none';
+}
+
+function ev(e, type) {
+  e.preventDefault();
+  const zone = document.getElementById('uploadZone');
+  if (type === 'over')  zone.classList.add('over');
+  if (type === 'leave') zone.classList.remove('over');
+  if (type === 'drop')  { zone.classList.remove('over'); addFiles(e.dataTransfer.files); }
+}
+
+function addFiles(newFiles) {
+  Array.from(newFiles).forEach(f => {
+    if (f.type.startsWith('image/') || f.type.startsWith('video/')) {
+      if (f.size > 500 * 1024 * 1024) {
+        toast('⚠️ File too large: ' + f.name + ' (max 500MB)');
+        return;
+      }
+      files.push(f);
+    }
+  });
+  const info = document.getElementById('uploadInfo');
+  info.style.display = 'block';
+  const photoCount = files.filter(f => f.type.startsWith('image/')).length;
+  const videoCount = files.filter(f => f.type.startsWith('video/')).length;
+  info.textContent = `✓ ${photoCount} photo${photoCount !== 1 ? 's' : ''} + ${videoCount} video${videoCount !== 1 ? 's' : ''}`;
+}
+
+async function createAlbum() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('⚠️ Enter album name'); return; }
+  if (!db)   { toast('❌ Not connected to database'); return; }
+
+  showLoader('Creating album...');
+
+  const id = 'album_' + Date.now();
+  let photoURLs = [];
+
+  if (files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      document.getElementById('loaderText').textContent = `Uploading photo ${i + 1} of ${files.length}...`;
+      const f    = files[i];
+      const ext  = f.name.split('.').pop() || 'jpg';
+      const path = `${id}/${Date.now()}_${i}.${ext}`;
+      try {
+        const { error: upErr } = await db.storage.from('photos').upload(path, f, { upsert: true });
+        if (upErr) {
+          console.error('Upload error:', upErr);
+          continue;
+        }
+        const { data: urlData } = db.storage.from('photos').getPublicUrl(path);
+        if (urlData?.publicUrl) photoURLs.push(urlData.publicUrl);
+      } catch(e) {
+        console.error('Upload exception:', e);
+        toast('❌ Upload failed: ' + e.message);
+      }
+    }
+  }
+
+  const album = {
+    id,
+    name,
+    client_name:      document.getElementById('f-client').value.trim() || 'Client',
+    date:             document.getElementById('f-date').value || new Date().toISOString().split('T')[0],
+    paid:             document.getElementById('f-paid').checked,
+    price:            parseFloat(document.getElementById('f-price').value) || 0,
+    currency:         document.getElementById('f-currency').value,
+    photos:           photoURLs,
+    photo_count:      photoURLs.length,
+    media_count:      photoURLs.length,
+    payment_pending:  false,
+    unlocked:         false,
+    proof_url:        null,
+    external_link:    document.getElementById('f-download-link').value.trim() || null,
+    created_at:       new Date().toISOString(),
+  };
+
+  const { error } = await db.from('albums').insert([album]);
+  hideLoader();
+
+  if (error) {
+    toast('❌ Error saving album: ' + error.message);
+    console.error(error);
+    return;
+  }
+
+  albums.unshift(album);
+  closeModal('modal-new');
+  resetForm();
+  renderDashboard();
+  toast('✅ Album created with ' + photoURLs.length + ' photos!');
+  setTimeout(() => showShareModal(id), 500);
+}
+
+function resetForm() {
+  document.getElementById('f-name').value   = '';
+  document.getElementById('f-client').value = '';
+  document.getElementById('f-price').value  = '150';
+  document.getElementById('f-download-link').value = '';
+  document.getElementById('uploadInfo').style.display = 'none';
+  files = [];
+  proofFile = null;
+}
+
+// ══════════ SETTINGS ══════════
+async function saveSettings() {
+  const name     = document.getElementById('studioNameInput').value.trim();
+  const watermark= document.getElementById('watermarkInput').value.trim();
+  const bankText = document.getElementById('bankDetailsInput').value.trim();
+  if (!name) { toast('⚠️ Enter studio name'); return; }
+  studioName    = name;
+  watermarkText = watermark;
+  const newPin  = document.getElementById('pinInput')?.value?.trim();
+  const existing= JSON.parse(localStorage.getItem('fs_cfg') || '{}');
+  const pin     = (newPin && newPin.length === 4) ? newPin : (existing.pin || '1234');
+  localStorage.setItem('fs_cfg', JSON.stringify({ studioName: name, watermarkText: watermark, pin, bankDetails: bankText }));
+  document.getElementById('dashTitle').textContent = 'Welcome, ' + name + ' 👋';
+
+  // Save bank details to Supabase so gallery.html can read it
+  if (db && bankText) {
+    try {
+      await db.from('settings').upsert({ id: 'main', bank_details: bankText }, { onConflict: 'id' });
+    } catch(e) { console.log('Settings save:', e); }
+  }
+  closeModal('modal-settings');
+  toast('✅ Settings saved!' + (newPin && newPin.length === 4 ? ' PIN updated.' : ''));
+}
+
+// ══════════ DELETE ══════════
+async function deleteAlbum(id) {
+  if (!confirm('Delete this album? This cannot be undone.')) return;
+  showLoader('Deleting...');
+  if (db) {
+    await db.from('albums').delete().eq('id', id);
+    const album = getAlbum(id);
+    if (album?.photos?.length) {
+      const paths = album.photos.map(url => {
+        const parts = url.split('/photos/');
+        return parts[1] || '';
+      }).filter(Boolean);
+      if (paths.length) await db.storage.from('photos').remove(paths);
+    }
+  }
+  albums = albums.filter(a => a.id !== id);
+  hideLoader();
+  renderDashboard();
+  toast('🗑️ Album deleted');
+}
+
+// ══════════ SHARE ══════════
+function showShareModal(id) {
+  const album = getAlbum(id);
+  if (!album) return;
+  shareURL = SITE_URL + '/gallery.html?album=' + id;
+  document.getElementById('shareLink').textContent = shareURL;
+  openModal('modal-share');
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(shareURL).then(() => toast('📋 Link copied!'));
+}
+
+function shareWA() {
+  const album = albums.find(a => shareURL.includes(a.id));
+  const msg   = `Hi ${album?.client_name || ''}! 📸\nYour photos are ready! Open the link:\n${shareURL}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg));
+}
+
+// ══════════ CLIENT GALLERY ══════════
+function openClientGallery(album) {
+  if (!album) return;
+  curAlbum = album.id;
+  goTo('client');
+
+  document.getElementById('cBy').textContent    = studioName;
+  document.getElementById('cTitle').textContent  = album.name;
+  document.getElementById('cMeta').textContent   = (album.photo_count || album.photos?.length || 0) + ' photos • ' + (album.date || '');
+  document.getElementById('cPrice').textContent  = (album.price || 0) + ' ' + (album.currency || 'USD');
+  document.getElementById('payAmt').textContent  = (album.price || 0) + ' ' + (album.currency || 'USD');
+
+  const isPending  = album.payment_pending && !album.unlocked;
+  const isUnlocked = !album.paid || album.unlocked;
+
+  document.getElementById('cPayWall').style.display  = (!isUnlocked && !isPending) ? 'block' : 'none';
+  document.getElementById('cPending').style.display  = isPending ? 'block' : 'none';
+  document.getElementById('cPending').classList.toggle('show', isPending);
+  document.getElementById('cPreview').style.display  = isUnlocked ? 'none' : 'block';
+  document.getElementById('cUnlocked').style.display = isUnlocked ? 'block' : 'none';
+
+  if (isUnlocked) renderUnlocked(album);
+  else renderPreview(album);
+}
+
+function renderPreview(album) {
+  const photos = album.photos || [];
+  const grid   = document.getElementById('cPreviewGrid');
+  if (photos.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(255,255,255,.3);font-size:12px;">No media yet</div>';
+    return;
+  }
+  grid.innerHTML = photos.slice(0, 9).map((p, i) => {
+    const isVideo = p.toLowerCase().endsWith('.mp4') || p.toLowerCase().endsWith('.mov') || p.toLowerCase().endsWith('.webm');
+    const watermarkOverlay = watermarkText ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);font-size:18px;font-weight:700;color:rgba(255,255,255,.4);text-align:center;pointer-events:none;word-wrap:break-word;padding:10px;">${watermarkText}</div>` : '';
+    return `<div class="photo-item ${i >= 3 ? 'locked' : ''}" style="position:relative;" oncontextmenu="return false;" ondragstart="return false;">
+      ${isVideo 
+        ? `<video src="${p}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" oncontextmenu="return false;" ondragstart="return false;" controlsList="nodownload"></video>` 
+        : `<img src="${p}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" oncontextmenu="return false;" ondragstart="return false;">`}
+      ${watermarkOverlay}
+    </div>`;
+  }).join('');
+}
+
+function renderUnlocked(album) {
+  const photos = album.photos || [];
+  const hasExternalLink = album.external_link && album.external_link.trim();
+  
+  const extSection = document.getElementById('externalLinkSection');
+  const dlAllBtn = document.getElementById('dlAllBtn');
+  if (hasExternalLink) {
+    extSection.style.display = 'block';
+    document.getElementById('externalLinkBtn').href = album.external_link;
+    dlAllBtn.style.display = 'none';
+  } else {
+    extSection.style.display = 'none';
+    dlAllBtn.style.display = 'block';
+  }
+  
+  if (photos.length === 0) {
+    document.getElementById('cUnlockedGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(255,255,255,.3);font-size:12px;">No photos available</div>';
+    return;
+  }
+  document.getElementById('cUnlockedGrid').innerHTML = photos.map((p, i) => {
+    const isVideo = p.toLowerCase().endsWith('.mp4') || p.toLowerCase().endsWith('.mov') || p.toLowerCase().endsWith('.webm');
+    return `<div class="photo-item-ul" ${!isVideo ? `style="background-image:url(${p})"` : ''} oncontextmenu="return false;" ondragstart="return false;">
+      ${isVideo ? `<video src="${p}" style="width:100%;height:100%;object-fit:cover;" controls oncontextmenu="return false;" ondragstart="return false;" controlsList="nodownload"></video>` : ''}
+      <div class="ul-overlay">
+        <button class="ul-btn" onclick="dlPhoto('${p}',${i})" title="Download">⬇️</button>
+        <button class="ul-btn" onclick="viewMedia('${p}')" title="${isVideo ? 'Play' : 'View'}">🔍</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════ PROOF UPLOAD ══════════
+function proofEv(e, type) {
+  e.preventDefault();
+  const zone = document.getElementById('proofZone');
+  if (type === 'over')  zone.classList.add('over');
+  if (type === 'leave') zone.classList.remove('over');
+  if (type === 'drop')  { zone.classList.remove('over'); addProof(e.dataTransfer.files); }
+}
+
+function addProof(files) {
+  if (files.length > 0) {
+    const file = files[0];
+    const isImage = file.type.startsWith('image/');
+    const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+    
+    if (isImage || isPDF) {
+      proofFile = file;
+      const info = document.getElementById('proofInfo');
+      info.style.display = 'block';
+      info.textContent   = `✓ ${proofFile.name}`;
+    } else {
+      toast('⚠️ Please upload an image or PDF file');
+    }
+  }
+}
+
+function viewProof(url) {
+  if (url.toLowerCase().endsWith('.pdf')) {
+    window.open(url, '_blank');
+  } else {
+    document.getElementById('proofImg').src = url;
+    openModal('modal-proof');
+  }
+}
+
+// ══════════ PAYMENT ══════════
+async function sendPayRequest() {
+  if (!proofFile) {
+    toast('⚠️ Please upload a transfer proof');
+    return;
+  }
+
+  closeModal('modal-pay');
+  showLoader('Uploading proof...');
+
+  try {
+    const proofPath = `proofs/${curAlbum}_${Date.now()}.jpg`;
+    const { error: upErr } = await db.storage.from('photos').upload(proofPath, proofFile);
+    
+    if (upErr) {
+      hideLoader();
+      toast('❌ Upload failed: ' + upErr.message);
+      return;
+    }
+
+    const { data: urlData } = db.storage.from('photos').getPublicUrl(proofPath);
+    const proofUrl = urlData?.publicUrl;
+
+    showLoader('Sending payment request...');
+    const updateData = { 
+      payment_pending: true,
+      proof_url: proofUrl
+    };
+    
+    const { error: updateErr } = await db.from('albums').update(updateData).eq('id', curAlbum);
+
+    if (updateErr) {
+      hideLoader();
+      console.error('Update error:', updateErr);
+      
+      if (updateErr.message.includes('proof_url')) {
+        toast('⚠️ Your Supabase table is missing the proof_url column. Please add it and try again.');
+        return;
+      }
+      
+      toast('❌ Error saving request: ' + updateErr.message);
+      return;
+    }
+
+    const album = getAlbum(curAlbum);
+    if (album) { 
+      album.payment_pending = true;
+      album.proof_url = proofUrl;
+    }
+    
+    hideLoader();
+    document.getElementById('cPayWall').style.display = 'none';
+    document.getElementById('cPending').style.display = 'block';
+    document.getElementById('cPending').classList.add('show');
+    toast('✅ Proof submitted! Waiting for confirmation...');
+    proofFile = null;
+    
+    setTimeout(() => renderDashboard(), 1000);
+  } catch(e) {
+    hideLoader();
+    toast('❌ Error: ' + e.message);
+  }
+}
+
+async function confirmPay(id) {
+  showLoader('Confirming payment...');
+  if (db) {
+    await db.from('albums').update({ unlocked: true, payment_pending: false }).eq('id', id);
+  }
+  const album = getAlbum(id);
+  if (album) { album.unlocked = true; album.payment_pending = false; }
+  hideLoader();
+  renderDashboard();
+  toast('✅ Payment confirmed! Client can now download.');
+  if (album) {
+    const link = SITE_URL + '/gallery.html?album=' + id;
+    const msg  = `Hi ${album.client_name || ''}! 🎉\nYour payment is confirmed.\nYour photos are ready to download:\n${link}`;
+    setTimeout(() => window.open('https://wa.me/?text=' + encodeURIComponent(msg)), 800);
+  }
+}
+
+async function rejectPay(id) {
+  if (db) await db.from('albums').update({ payment_pending: false, proof_url: null }).eq('id', id);
+  const album = getAlbum(id);
+  if (album) album.payment_pending = false;
+  renderDashboard();
+  toast('❌ Request rejected');
+}
+
+async function checkStatus() {
+  if (!db) return;
+  showLoader('Checking...');
+  const { data } = await db.from('albums').select('*').eq('id', curAlbum).single();
+  hideLoader();
+  if (data) {
+    const idx = albums.findIndex(a => a.id === curAlbum);
+    if (idx >= 0) albums[idx] = data;
+    else albums.push(data);
+    openClientGallery(data);
+  }
+}
+
+// ══════════ DOWNLOAD ══════════
+async function dlAll() {
+  const album = getAlbum(curAlbum);
+  if (!album || !album.photos || album.photos.length === 0) {
+    toast('⚠️ No media to download');
+    return;
+  }
+
+  showLoader('Creating ZIP file...');
+  
+  try {
+    const zip = new JSZip();
+    const mediaFolder = zip.folder(album.name || 'Media');
+    
+    for (let i = 0; i < album.photos.length; i++) {
+      const mediaUrl = album.photos[i];
+      document.getElementById('loaderText').textContent = `Creating ZIP: ${i + 1} of ${album.photos.length}...`;
+      
+      try {
+        const response = await fetch(mediaUrl);
+        const blob = await response.blob();
+        const isVideo = mediaUrl.toLowerCase().endsWith('.mp4') || mediaUrl.toLowerCase().endsWith('.mov') || mediaUrl.toLowerCase().endsWith('.webm');
+        const ext = isVideo ? mediaUrl.split('.').pop() : 'jpg';
+        const fileName = `media_${String(i + 1).padStart(3, '0')}.${ext}`;
+        mediaFolder.file(fileName, blob);
+      } catch (e) {
+        console.error('Error fetching media:', e);
+      }
+    }
+    
+    document.getElementById('loaderText').textContent = 'Generating ZIP file...';
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (album.name || 'Media') + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    hideLoader();
+    toast('✅ ZIP file downloaded!');
+  } catch (e) {
+    hideLoader();
+    console.error('ZIP creation error:', e);
+    toast('❌ Error creating ZIP: ' + e.message);
+  }
+}
+
+function dlPhoto(src, idx) {
+  const a = document.createElement('a');
+  a.href     = src;
+  a.download = 'photo_' + (idx + 1) + '.jpg';
+  a.target   = '_blank';
+  a.click();
+}
+
+function viewMedia(src) {
+  const isVideo = src.toLowerCase().endsWith('.mp4') || src.toLowerCase().endsWith('.mov') || src.toLowerCase().endsWith('.webm');
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+  if (isVideo) {
+    el.innerHTML = `<video src="${src}" style="max-width:95vw;max-height:95vh;border-radius:8px;" controls autoplay></video>`;
+  } else {
+    el.innerHTML = `<img src="${src}" style="max-width:95vw;max-height:95vh;border-radius:8px;object-fit:contain;">`;
+  }
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+}
+
+function viewPhoto(src) { viewMedia(src); }
+
+// ══════════ MODALS ══════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); })
+);
+
+// ══════════ LOADER & TOAST ══════════
+function showLoader(text) {
+  document.getElementById('loaderText').textContent = text || 'Loading...';
+  document.getElementById('loader').classList.add('show');
+}
+function hideLoader() { document.getElementById('loader').classList.remove('show'); }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+
+// ══════════ PIN PROTECTION ══════════
+let pinInput = '';
+const DEFAULT_PIN = '1234';
+
+function checkPin() {
+  const cfg = JSON.parse(localStorage.getItem('fs_cfg') || '{}');
+  const correctPin = cfg.pin || DEFAULT_PIN;
+  // If already authenticated this session, go straight to dashboard
+  if (sessionStorage.getItem('fs_authed') === '1') {
+    loadPhotographerDashboard();
+    return;
+  }
+  goTo('pin');
+}
+
+function pinPress(val) {
+  if (val === 'del') {
+    pinInput = pinInput.slice(0, -1);
+  } else if (val === 'ok') {
+    verifyPin();
+    return;
+  } else {
+    if (pinInput.length >= 4) return;
+    pinInput += val;
+    if (pinInput.length === 4) setTimeout(verifyPin, 150);
+  }
+  updatePinDots();
+}
+
+function updatePinDots() {
+  document.querySelectorAll('.pin-dot').forEach((dot, i) => {
+    dot.classList.toggle('filled', i < pinInput.length);
+  });
+}
+
+function verifyPin() {
+  const cfg = JSON.parse(localStorage.getItem('fs_cfg') || '{}');
+  const correctPin = cfg.pin || DEFAULT_PIN;
+  if (pinInput === correctPin) {
+    sessionStorage.setItem('fs_authed', '1');
+    document.getElementById('pinError').style.display = 'none';
+    loadPhotographerDashboard();
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+    pinInput = '';
+    updatePinDots();
+    // Shake animation
+    const dots = document.getElementById('pinDots');
+    dots.style.animation = 'shake .3s ease';
+    setTimeout(() => dots.style.animation = '', 300);
+  }
+}
+
+async function loadPhotographerDashboard() {
+  goTo('dashboard');
+  document.getElementById('dashTitle').textContent = 'Welcome, ' + studioName + ' 👋';
+  document.getElementById('studioNameInput').value = studioName;
+  document.getElementById('watermarkInput').value = watermarkText;
+
+  showLoader('Loading albums...');
+  const { data, error } = await db.from('albums').select('*').order('created_at', { ascending: false });
+  hideLoader();
+  if (!error && data) albums = data;
+  renderDashboard();
+
+  db.channel('albums').on('postgres_changes',
+    { event: '*', schema: 'public', table: 'albums' },
+    payload => {
+      if (!payload.new) return;
+      const idx = albums.findIndex(a => a.id === payload.new.id);
+      if (idx >= 0) albums[idx] = payload.new;
+      else albums.unshift(payload.new);
+      renderDashboard();
+      if (payload.new.payment_pending && !payload.new.unlocked) {
+        toast('🔔 New payment: ' + payload.new.name);
+        pushNotify('💰 New Payment Request!',
+          (payload.new.client_name || 'Client') + ' sent proof for: ' + payload.new.name);
+        // Play sound
+        
+      }
+    }
+  ).subscribe();
+
+}
+
+function playAlert() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784].forEach((freq, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.3);
+      o.start(ctx.currentTime + i * 0.15);
+      o.stop(ctx.currentTime + i * 0.15 + 0.3);
+    });
+  } catch(e) {}
+}
+
+window.pinPress   = pinPress;
+window.checkPin   = checkPin;
+
+// ══════════ PWA SERVICE WORKER ══════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Inline SW as blob — no separate file needed
+    const swCode = `const CACHE = 'fotoshare-v2';
+const STATIC = ['/', '/index.html'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.allSettled(STATIC.map(u => c.add(u).catch(()=>{}))))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.url.includes('supabase.co')) return;
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        if (e.request.method === 'GET' && res.status === 200) {
+          caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
+});
+
+// ── Handle push notifications from background ──
+self.addEventListener('push', e => {
+  const data = e.data ? e.data.json() : {};
+  e.waitUntil(
+    self.registration.showNotification(data.title || '🔔 FotoShare', {
+      body:             data.body || 'New payment request received',
+      icon:             '/icon-192.png',
+      badge:            '/icon-192.png',
+      tag:              'fotoshare-payment',
+      renotify:         true,
+      requireInteraction: true,
+      data:             { url: data.url || '/' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(list => {
+        if (list.length > 0) { list[0].focus(); return; }
+        return clients.openWindow(e.notification.data?.url || '/');
+      })
+  );
+});
+`;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(e => console.log('SW:', e));
+  });
+}
+
+// ══════════ PWA INSTALL PROMPT ══════════
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installPrompt = e;
+  // Show install banner after 3 seconds if not already installed
+  setTimeout(() => {
+    if (installPrompt) showInstallBanner();
+  }, 3000);
+});
+
+function showInstallBanner() {
+  const banner = document.createElement('div');
+  banner.id = 'installBanner';
+  banner.style.cssText = `
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:#1a1714; color:white; border:1px solid #c8a96e;
+    border-radius:14px; padding:14px 18px; z-index:9999;
+    display:flex; align-items:center; gap:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); width:90%; max-width:360px;
+    font-family:'Outfit',sans-serif; font-size:13px;
+  `;
+  banner.innerHTML = `
+    <span style="font-size:28px;">📸</span>
+    <div style="flex:1;">
+      <div style="font-weight:700;margin-bottom:2px;">Install FotoShare App</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);">Add to home screen for quick access</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button onclick="document.getElementById('installBanner').remove();installPrompt=null;"
+        style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:6px 10px;color:rgba(255,255,255,.6);cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;">
+        Later
+      </button>
+      <button onclick="installApp()"
+        style="background:#c8a96e;border:none;border-radius:8px;padding:6px 12px;color:#1a1714;cursor:pointer;font-weight:700;font-family:'Outfit',sans-serif;font-size:11px;">
+        Install
+      </button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function installApp() {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  const { outcome } = await installPrompt.userChoice;
+  installPrompt = null;
+  const banner = document.getElementById('installBanner');
+  if (banner) banner.remove();
+  if (outcome === 'accepted') toast('✅ FotoShare installed!');
+}
+window.installApp = installApp;
+</script>
+</body>
+</html>

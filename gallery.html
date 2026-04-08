@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Gallery</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root {
+  --accent: #c8a96e;
+  --accent2: #8b6914;
+  --danger: #d64c4c;
+  --success: #3a9e6f;
+  --border: #e8e3da;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Outfit',sans-serif;
+  background:#0e0d0b; color:white;
+  min-height:100vh;
+}
+
+/* Hero */
+.hero {
+  height:240px; position:relative; overflow:hidden;
+  display:flex; align-items:flex-end;
+}
+.hero-bg { position:absolute; inset:0; background:linear-gradient(135deg,#1a1714,#2d2520); }
+.hero-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(14,13,11,1) 0%,transparent 70%); }
+.hero-content { position:relative; z-index:1; padding:20px; width:100%; }
+.hero-by { font-size:10px; color:var(--accent); font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.hero-title { font-family:'Playfair Display',serif; font-size:26px; color:white; margin-bottom:6px; }
+.hero-meta { font-size:11px; color:rgba(255,255,255,.4); }
+
+/* Preview */
+.preview-section { padding:0 16px 16px; }
+.section-label { font-size:11px; color:rgba(255,255,255,.35); margin-bottom:10px; }
+.photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+.photo-item {
+  aspect-ratio:1; border-radius:5px; overflow:hidden;
+  background:#2a2520; position:relative;
+  user-select:none; -webkit-user-select:none;
+}
+.photo-item img, .photo-item video {
+  width:100%; height:100%; object-fit:cover; display:block;
+  pointer-events:none; -webkit-user-drag:none;
+}
+.photo-item.locked img, .photo-item.locked video { filter:blur(12px) brightness(.35); }
+.photo-item.locked::after {
+  content:'🔒'; position:absolute; inset:0; z-index:11;
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+}
+
+/* Unlocked grid */
+.photo-item-ul {
+  aspect-ratio:1; border-radius:5px; overflow:hidden;
+  background:#2a2520; position:relative;
+  background-size:cover; background-position:center;
+  cursor:pointer;
+}
+.photo-item-ul:hover .ul-overlay { opacity:1; }
+.ul-overlay {
+  position:absolute; inset:0; background:rgba(0,0,0,.6);
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  opacity:0; transition:.2s;
+}
+.ul-btn {
+  background:var(--accent); border:none; border-radius:50%;
+  width:36px; height:36px; font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* Paywall */
+.pay-wall {
+  margin:16px; background:rgba(255,255,255,.05);
+  border:1px solid rgba(200,169,110,.25); border-radius:14px;
+  padding:20px; text-align:center;
+}
+.pw-icon { font-size:32px; margin-bottom:10px; display:block; }
+.pw-title { font-size:17px; font-weight:800; margin-bottom:6px; }
+.pw-sub { font-size:12px; color:rgba(255,255,255,.45); line-height:1.7; margin-bottom:14px; }
+.pw-price { font-size:32px; font-weight:900; color:var(--accent); }
+.pw-note { font-size:10px; color:rgba(255,255,255,.3); margin:4px 0 16px; }
+.btn-pay {
+  background:linear-gradient(135deg,var(--accent),#e8c878);
+  color:#1a1714; border:none; border-radius:10px; padding:13px;
+  font-family:'Outfit',sans-serif; font-size:14px; font-weight:900;
+  cursor:pointer; width:100%; transition:all .2s;
+}
+.btn-pay:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(200,169,110,.4); }
+
+/* Pending */
+.pending-notice {
+  margin:16px; background:rgba(232,150,58,.1);
+  border:1px solid rgba(232,150,58,.3); border-radius:14px;
+  padding:20px; text-align:center; display:none;
+}
+.pending-notice.show { display:block; }
+.pn-icon { font-size:28px; margin-bottom:8px; display:block; }
+.pn-title { font-size:15px; font-weight:800; color:#e8963a; margin-bottom:6px; }
+.pn-sub { font-size:12px; color:rgba(255,255,255,.4); line-height:1.7; }
+
+/* Unlocked section */
+.unlocked-section { padding:0 16px 16px; }
+.ul-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:0 0 8px; border-bottom:1px solid rgba(255,255,255,.08); }
+.ul-title { font-size:14px; font-weight:700; }
+.btn-dl-all {
+  background:var(--accent); color:#1a1714; border:none;
+  border-radius:8px; padding:8px 14px; font-family:'Outfit',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer;
+}
+
+/* Buttons */
+.btn {
+  border:none; border-radius:8px; padding:9px 16px;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+  cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-accent { background:var(--accent); color:#1a1714; }
+.btn-ghost { background:transparent; color:rgba(255,255,255,.5); border:1px solid rgba(255,255,255,.15); }
+.btn-full { width:100%; justify-content:center; padding:12px; }
+.btn-success { background:var(--success); color:white; }
+
+/* Modal */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+  z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.overlay.open { opacity:1; pointer-events:all; }
+.modal {
+  background:#1a1714; border-radius:18px; width:100%; max-width:480px;
+  max-height:92vh; overflow-y:auto; transform:translateY(20px); transition:transform .25s;
+  color:white;
+}
+.overlay.open .modal { transform:translateY(0); }
+.modal-head {
+  padding:20px 20px 0; display:flex; align-items:center;
+  justify-content:space-between; margin-bottom:16px;
+}
+.modal-title { font-size:16px; font-weight:800; }
+.btn-x {
+  background:rgba(255,255,255,.1); border:none; border-radius:50%;
+  width:28px; height:28px; font-size:13px; cursor:pointer; color:white;
+  display:flex; align-items:center; justify-content:center;
+}
+.modal-body { padding:0 20px 20px; }
+
+/* Payment modal */
+.pay-amount-box { background:rgba(255,255,255,.04); border-radius:10px; padding:16px; text-align:center; margin-bottom:16px; }
+.pay-amt-num { font-size:36px; font-weight:900; color:var(--accent); }
+.pay-amt-sub { font-size:11px; color:rgba(255,255,255,.35); margin-top:3px; }
+
+.bank-details-box {
+  background:rgba(200,169,110,.08); border:1px solid rgba(200,169,110,.2);
+  border-radius:10px; padding:14px; margin-bottom:14px;
+}
+.bank-details-box h3 { font-size:13px; margin-bottom:10px; color:var(--accent); }
+.bank-detail-line { font-size:12px; color:rgba(255,255,255,.7); padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+.bank-detail-line:last-child { border-bottom:none; }
+
+.form-label { display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:rgba(255,255,255,.6); }
+
+.proof-upload-zone {
+  border:2px dashed rgba(255,255,255,.2); border-radius:10px; padding:20px;
+  text-align:center; cursor:pointer; transition:all .2s; margin-bottom:14px;
+}
+.proof-upload-zone:hover, .proof-upload-zone.over { border-color:var(--accent); background:rgba(200,169,110,.08); }
+.proof-icon { font-size:24px; margin-bottom:6px; display:block; }
+.proof-text { font-size:11px; color:rgba(255,255,255,.5); }
+.proof-text strong { color:var(--accent); }
+.proof-info { font-size:11px; color:var(--success); font-weight:700; margin-top:6px; display:none; }
+
+.btn-confirm-pay {
+  background:var(--success); color:white; border:none; border-radius:10px; padding:13px;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+  cursor:pointer; width:100%; display:none; margin-bottom:8px;
+}
+.btn-confirm-pay.show { display:block; }
+
+/* Loader */
+.loader {
+  position:fixed; inset:0; background:rgba(14,13,11,.92);
+  z-index:9000; display:none; align-items:center; justify-content:center;
+  flex-direction:column; gap:14px;
+}
+.loader.show { display:flex; }
+.loader-spinner {
+  width:40px; height:40px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.1); border-top-color:var(--accent);
+  animation:spin .7s linear infinite;
+}
+.loader-text { font-size:13px; font-weight:600; color:rgba(255,255,255,.5); }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Toast */
+.toast {
+  position:fixed; bottom:20px; left:50%;
+  transform:translateX(-50%) translateY(70px);
+  background:#2d2a26; color:white; padding:10px 20px;
+  border-radius:50px; font-size:12px; font-weight:600;
+  z-index:9999; transition:transform .3s; pointer-events:none; white-space:nowrap;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* Error screen */
+.error-screen {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:100vh; text-align:center; padding:40px 24px;
+}
+.error-icon { font-size:48px; margin-bottom:16px; }
+.error-title { font-size:20px; font-weight:800; margin-bottom:8px; }
+.error-sub { font-size:13px; color:rgba(255,255,255,.4); line-height:1.7; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text" id="loaderText">Loading your gallery...</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main"></div>
+
+<!-- PAYMENT MODAL -->
+<div class="overlay" id="modal-pay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">💳 Bank Transfer</div>
+      <button class="btn-x" onclick="closeModal('modal-pay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pay-amount-box">
+        <div class="pay-amt-num" id="payAmt">$0</div>
+        <div class="pay-amt-sub">One-time payment • All photos in full quality</div>
+      </div>
+      <div class="bank-details-box" id="bankDetails"></div>
+      <label class="form-label">📸 Upload Transfer Proof</label>
+      <div class="proof-upload-zone" id="proofZone"
+        onclick="document.getElementById('proofInput').click()"
+        ondragover="proofEv(event,'over')" ondragleave="proofEv(event,'leave')" ondrop="proofEv(event,'drop')">
+        <span class="proof-icon">📄</span>
+        <div class="proof-text">Drag receipt here or <strong>click to browse</strong></div>
+        <div class="proof-info" id="proofInfo"></div>
+      </div>
+      <input type="file" id="proofInput" accept="image/*,.pdf" onchange="addProof(this.files)" style="display:none;">
+      <button class="btn-confirm-pay show" id="btnConfirm" onclick="sendPayRequest()">✅ Submit for Review</button>
+      <p style="font-size:10px;color:rgba(255,255,255,.2);text-align:center;margin-top:8px;">The photographer will review your proof and unlock your photos</p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════ CONFIG ══════════
+const SUPA_URL = 'https://fmjgllkivxceiykayscx.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtamdsbGtpdnhjZWl5a2F5c2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTE3ODIsImV4cCI6MjA5MTA2Nzc4Mn0.8levxfUvQ_L9zPS8HSYF-gJa6J8M5FWWX-SaDv5mnm8';
+
+// ══════════ STATE ══════════
+let db       = null;
+let album    = null;
+let proofFile = null;
+
+// ══════════ BOOT ══════════
+document.addEventListener('DOMContentLoaded', async () => {
+  const albumId = new URLSearchParams(window.location.search).get('album');
+  if (!albumId) {
+    showError('No gallery link', 'This link is invalid or has expired.');
+    return;
+  }
+
+  showLoader('Loading your gallery...');
+  try {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    db = createClient(SUPA_URL, SUPA_KEY);
+    const { data, error } = await db.from('albums').select('*').eq('id', albumId).single();
+    hideLoader();
+    if (error || !data) { showError('Gallery not found', 'This link may have expired or been removed.'); return; }
+    album = data;
+    renderGallery();
+  } catch(e) {
+    hideLoader();
+    showError('Connection Error', 'Could not load your gallery. Please try again.');
+    console.error(e);
+  }
+});
+
+// ══════════ RENDER ══════════
+async function renderGallery() {
+  const isPending  = album.payment_pending && !album.unlocked;
+  const isUnlocked = !album.paid || album.unlocked;
+  const photos     = album.photos || [];
+
+  // Set payment modal info
+  document.getElementById('payAmt').textContent = (album.price || 0) + ' ' + (album.currency || 'USD');
+  // Load bank details from Supabase settings
+  try {
+    const { data: settingsData } = await db.from('settings').select('bank_details').eq('id', 'main').single();
+    const bankText = settingsData?.bank_details || album.pay_instructions || 'Contact the photographer for payment details.';
+    document.getElementById('bankDetails').innerHTML = `
+      <h3>🏦 Bank Details</h3>
+      ${bankText.split('\n').filter(l => l.trim()).map(l => `<div class="bank-detail-line">${l}</div>`).join('')}
+    `;
+  } catch(e) {
+    document.getElementById('bankDetails').innerHTML = `<h3>🏦 Bank Details</h3><div class="bank-detail-line">${album.pay_instructions || 'Contact the photographer for payment details.'}</div>`;
+  }
+
+  let html = `
+    <div class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-by">📸 Your Gallery</div>
+        <div class="hero-title">${album.name || 'Album'}</div>
+        <div class="hero-meta">${photos.length} photos • ${album.date || ''}</div>
+      </div>
+    </div>`;
+
+  if (!isUnlocked && !isPending) {
+    // Preview + paywall
+    html += `
+    <div class="preview-section">
+      <div class="section-label">👁️ PREVIEW — First 3 photos</div>
+      <div class="photo-grid">${previewGrid(photos)}</div>
+    </div>
+    <div class="pay-wall">
+      <span class="pw-icon">🔒</span>
+      <div class="pw-title">Unlock Full Gallery</div>
+      <div class="pw-sub">Get all ${photos.length} photos in full quality</div>
+      <div class="pw-price">${album.price} ${album.currency}</div>
+      <div class="pw-note">One-time payment • Unlimited downloads</div>
+      <button class="btn-pay" onclick="openModal('modal-pay')">💳 Unlock Now</button>
+    </div>`;
+  } else if (isPending) {
+    html += `
+    <div class="preview-section">
+      <div class="section-label">👁️ PREVIEW</div>
+      <div class="photo-grid">${previewGrid(photos)}</div>
+    </div>
+    <div class="pending-notice show">
+      <span class="pn-icon">⏳</span>
+      <div class="pn-title">Payment Under Review</div>
+      <div class="pn-sub">The photographer is reviewing your proof.<br>Your photos will unlock shortly!</div>
+      <button class="btn btn-ghost" style="margin-top:14px;width:100%;justify-content:center;" onclick="refreshStatus()">🔄 Check Status</button>
+    </div>`;
+  } else {
+    // Unlocked
+    html += `
+    <div class="unlocked-section">
+      <div class="ul-head">
+        <div class="ul-title">✅ All Photos — Full Quality</div>
+        ${album.external_link
+          ? `<a href="${album.external_link}" target="_blank" class="btn-dl-all">🔗 Download</a>`
+          : `<button class="btn-dl-all" onclick="dlAll()">⬇️ Download All</button>`}
+      </div>
+      <div class="photo-grid">${unlockedGrid(photos)}</div>
+    </div>`;
+  }
+
+  document.getElementById('main').innerHTML = html;
+}
+
+function previewGrid(photos) {
+  if (!photos.length) return '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(255,255,255,.3);font-size:12px;">No photos yet</div>';
+  return photos.slice(0, 9).map((p, i) => {
+    const isVid = isVideo(p);
+    return `<div class="photo-item ${i >= 3 ? 'locked' : ''}" oncontextmenu="return false;" ondragstart="return false;">
+      ${isVid
+        ? `<video src="${p}" style="width:100%;height:100%;object-fit:cover;" controlsList="nodownload" oncontextmenu="return false;"></video>`
+        : `<img src="${p}" loading="lazy" oncontextmenu="return false;" ondragstart="return false;">`}
+    </div>`;
+  }).join('');
+}
+
+function unlockedGrid(photos) {
+  if (!photos.length) return '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(255,255,255,.3);font-size:12px;">No photos</div>';
+  return photos.map((p, i) => {
+    const isVid = isVideo(p);
+    return `<div class="photo-item-ul" onclick="viewMedia('${p}')">
+      ${isVid
+        ? `<video src="${p}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" muted></video>`
+        : `<div style="width:100%;height:100%;background-image:url(${p});background-size:cover;background-position:center;"></div>`}
+      <div class="ul-overlay">
+        <button class="ul-btn" onclick="event.stopPropagation();dlPhoto('${p}',${i})">⬇️</button>
+        <button class="ul-btn" onclick="event.stopPropagation();viewMedia('${p}')">🔍</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function isVideo(url) {
+  return /\.(mp4|mov|webm)$/i.test(url);
+}
+
+// ══════════ PAYMENT ══════════
+function proofEv(e, type) {
+  e.preventDefault();
+  const z = document.getElementById('proofZone');
+  if (type === 'over')  z.classList.add('over');
+  if (type === 'leave') z.classList.remove('over');
+  if (type === 'drop')  { z.classList.remove('over'); addProof(e.dataTransfer.files); }
+}
+
+function addProof(files) {
+  if (!files.length) return;
+  const f = files[0];
+  if (!f.type.startsWith('image/') && f.type !== 'application/pdf' && !f.name.endsWith('.pdf')) {
+    toast('⚠️ Please upload an image or PDF'); return;
+  }
+  proofFile = f;
+  const info = document.getElementById('proofInfo');
+  info.style.display = 'block';
+  info.textContent = '✓ ' + f.name;
+}
+
+async function sendPayRequest() {
+  if (!proofFile) { toast('⚠️ Please upload transfer proof'); return; }
+  closeModal('modal-pay');
+  showLoader('Uploading proof...');
+  try {
+    const path = `proofs/${album.id}_${Date.now()}.jpg`;
+    const { error: upErr } = await db.storage.from('photos').upload(path, proofFile);
+    if (upErr) { hideLoader(); toast('❌ Upload failed: ' + upErr.message); return; }
+    const { data: urlData } = db.storage.from('photos').getPublicUrl(path);
+    showLoader('Sending request...');
+    const { error: updateErr } = await db.from('albums').update({
+      payment_pending: true, proof_url: urlData?.publicUrl
+    }).eq('id', album.id);
+    hideLoader();
+    if (updateErr) { toast('❌ Error: ' + updateErr.message); return; }
+    album.payment_pending = true;
+    proofFile = null;
+    toast('✅ Proof submitted! Waiting for confirmation...');
+    renderGallery();
+  } catch(e) {
+    hideLoader();
+    toast('❌ Error: ' + e.message);
+  }
+}
+
+async function refreshStatus() {
+  showLoader('Checking...');
+  const { data } = await db.from('albums').select('*').eq('id', album.id).single();
+  hideLoader();
+  if (data) { album = data; renderGallery(); }
+  else toast('Could not refresh. Try again.');
+}
+
+// ══════════ DOWNLOAD ══════════
+async function dlAll() {
+  if (!album?.photos?.length) { toast('⚠️ No media to download'); return; }
+  showLoader('Creating ZIP...');
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder(album.name || 'Photos');
+    for (let i = 0; i < album.photos.length; i++) {
+      document.getElementById('loaderText').textContent = `Packing ${i+1} of ${album.photos.length}...`;
+      try {
+        const res  = await fetch(album.photos[i]);
+        const blob = await res.blob();
+        const ext  = isVideo(album.photos[i]) ? album.photos[i].split('.').pop() : 'jpg';
+        folder.file(`photo_${String(i+1).padStart(3,'0')}.${ext}`, blob);
+      } catch(e) {}
+    }
+    document.getElementById('loaderText').textContent = 'Generating ZIP...';
+    const zipBlob = await zip.generateAsync({ type:'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = (album.name || 'Photos') + '.zip';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    hideLoader(); toast('✅ Downloaded!');
+  } catch(e) { hideLoader(); toast('❌ Error: ' + e.message); }
+}
+
+function dlPhoto(src, idx) {
+  const a = document.createElement('a');
+  a.href = src; a.download = 'photo_' + (idx+1) + '.jpg'; a.target = '_blank'; a.click();
+}
+
+function viewMedia(src) {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+  el.innerHTML = isVideo(src)
+    ? `<video src="${src}" style="max-width:95vw;max-height:95vh;border-radius:8px;" controls autoplay></video>`
+    : `<img src="${src}" style="max-width:95vw;max-height:95vh;border-radius:8px;object-fit:contain;">`;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+}
+
+// ══════════ HELPERS ══════════
+function showError(title, msg) {
+  document.getElementById('main').innerHTML = `
+    <div class="error-screen">
+      <div class="error-icon">😔</div>
+      <div class="error-title">${title}</div>
+      <div class="error-sub">${msg}</div>
+    </div>`;
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); })
+);
+
+function showLoader(text) {
+  document.getElementById('loaderText').textContent = text || 'Loading...';
+  document.getElementById('loader').classList.add('show');
+}
+function hideLoader() { document.getElementById('loader').classList.remove('show'); }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+window.openModal    = openModal;
+window.closeModal   = closeModal;
+window.proofEv      = proofEv;
+window.addProof     = addProof;
+window.sendPayRequest = sendPayRequest;
+window.refreshStatus  = refreshStatus;
+window.dlAll        = dlAll;
+window.dlPhoto      = dlPhoto;
+window.viewMedia    = viewMedia;
+</script>
+</body>
+</html>
