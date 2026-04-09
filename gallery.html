@@ -157,8 +157,9 @@ body {
   border-radius:10px; padding:14px; margin-bottom:14px;
 }
 .bank-details-box h3 { font-size:13px; margin-bottom:10px; color:var(--accent); }
-.bank-detail-line { font-size:12px; color:rgba(255,255,255,.7); padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+.bank-detail-line { font-size:12px; color:rgba(255,255,255,.7); padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06); line-height:1.6; }
 .bank-detail-line:last-child { border-bottom:none; }
+.bank-detail-line strong { color:var(--accent); font-weight:700; display:inline-block; min-width:140px; }
 
 .form-label { display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:rgba(255,255,255,.6); }
 
@@ -299,16 +300,30 @@ async function renderGallery() {
   // Set payment modal info
   document.getElementById('payAmt').textContent = (album.price || 0) + ' ' + (album.currency || 'USD');
   // Load bank details from Supabase settings
-  try {
-    const { data: settingsData } = await db.from('settings').select('bank_details').eq('id', 'main').single();
-    const bankText = settingsData?.bank_details || album.pay_instructions || 'Contact the photographer for payment details.';
-    document.getElementById('bankDetails').innerHTML = `
-      <h3>🏦 Bank Details</h3>
-      ${bankText.split('\n').filter(l => l.trim()).map(l => `<div class="bank-detail-line">${l}</div>`).join('')}
-    `;
-  } catch(e) {
-    document.getElementById('bankDetails').innerHTML = `<h3>🏦 Bank Details</h3><div class="bank-detail-line">${album.pay_instructions || 'Contact the photographer for payment details.'}</div>`;
+  const defaultBankDetails = 'Bank: NBD\nAccount Holder: SALEH EMAD JOUDIEH\nAccount Number: 1015835167201\nIBAN: AE170260001015835167201';
+  
+  // Priority: 1. Album specific instructions, 2. Global settings, 3. Hardcoded default
+  let bankText = album.pay_instructions?.trim();
+  
+  if (!bankText) {
+    try {
+      const { data: settingsData, error: settingsError } = await db.from('settings').select('bank_details').eq('id', 'main').maybeSingle();
+      if (!settingsError && settingsData?.bank_details) {
+        bankText = settingsData.bank_details.trim();
+      }
+    } catch(e) {
+      console.error('Error fetching settings:', e);
+    }
   }
+
+  if (!bankText) {
+    bankText = defaultBankDetails;
+  }
+
+  document.getElementById('bankDetails').innerHTML = `
+    <h3>🏦 Bank Details</h3>
+    ${bankText.split('\n').filter(l => l.trim()).map(l => `<div class="bank-detail-line">${l}</div>`).join('')}
+  `;
 
   let html = `
     <div class="hero">
