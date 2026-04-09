@@ -1007,9 +1007,9 @@ async function saveSettings() {
   document.getElementById('dashTitle').textContent = 'Welcome, ' + name + ' 👋';
 
   // Save bank details to Supabase so gallery.html can read it
-  if (db && bankText) {
+  if (db) {
     try {
-      await db.from('settings').upsert({ id: 'main', bank_details: bankText }, { onConflict: 'id' });
+      await db.from('settings').upsert({ id: 'main', bank_details: bankText || '' }, { onConflict: 'id' });
     } catch(e) { console.log('Settings save:', e); }
   }
   closeModal('modal-settings');
